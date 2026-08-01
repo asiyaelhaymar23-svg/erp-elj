@@ -26,6 +26,10 @@ COPY --from=build /app/package*.json ./
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
+# tsconfig.json : requis par ts-node au démarrage (voir docker-entrypoint.sh
+# -> prisma:seed), sinon il retombe sur des valeurs par défaut TypeScript
+# incompatibles entre elles ("module"/"moduleResolution").
+COPY --from=build /app/tsconfig.json ./tsconfig.json
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 RUN chmod +x ./docker-entrypoint.sh && mkdir -p uploads
 
@@ -35,4 +39,6 @@ HEALTHCHECK --interval=15s --timeout=5s --start-period=20s --retries=5 \
   CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
 
 ENTRYPOINT ["./docker-entrypoint.sh"]
-CMD ["node", "dist/main"]
+# nest build (sans rootDir défini) préserve l'arborescence src/ dans dist/ :
+# la sortie réelle est dist/src/main.js, pas dist/main.js.
+CMD ["node", "dist/src/main"]
