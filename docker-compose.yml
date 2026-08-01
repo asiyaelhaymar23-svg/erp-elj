@@ -1,0 +1,61 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-elj}
+      POSTGRES_USER: ${POSTGRES_USER:-elj}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-elj_password_a_changer}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-elj} -d ${POSTGRES_DB:-elj}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-elj}:${POSTGRES_PASSWORD:-elj_password_a_changer}@postgres:5432/${POSTGRES_DB:-elj}
+      JWT_SECRET: ${JWT_SECRET:-change-me-with-a-long-random-value}
+      REDIS_URL: redis://redis:6379
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:8080}
+      NODE_ENV: production
+      PORT: 3000
+    ports:
+      - "${BACKEND_PORT:-3000}:3000"
+    volumes:
+      - uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    environment:
+      # URL telle qu'appelée depuis le navigateur de l'utilisateur, pas
+      # depuis l'intérieur du réseau Docker (voir docker-entrypoint.d/40-env-config.sh).
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:3000}
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  uploads:

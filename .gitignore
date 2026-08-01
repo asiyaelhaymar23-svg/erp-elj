@@ -1,0 +1,22 @@
+# Dépendances
+node_modules/
+
+# Builds
+backend/dist/
+frontend/dist/
+
+# Environnement — jamais de secrets committés, seuls les .env.example le sont
+.env
+.env.*
+!.env.example
+
+# Prisma / données locales
+backend/uploads/
+
+# Éditeurs / OS
+.DS_Store
+*.log
+npm-debug.log*
+
+# Couverture de tests
+coverage/

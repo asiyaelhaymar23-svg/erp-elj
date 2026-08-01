@@ -1,0 +1,416 @@
+// ============================================================
+// SCHEMA PRISMA — Portail Suivis Service Électrique ELJ
+// Base de données PostgreSQL normalisée, 14 entités + paramètres
+// ============================================================
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ------------------------------------------------------------
+// ENUMS
+// ------------------------------------------------------------
+
+enum Role {
+  ADMINISTRATEUR
+  RESPONSABLE
+  PREPARATEUR
+  MAGASIN
+  MAINTENANCE
+  DIRECTION
+}
+
+enum Criticite {
+  A
+  B
+  C
+}
+
+enum StatutStock {
+  NORMAL
+  CRITIQUE
+  RUPTURE
+  SURSTOCK
+}
+
+enum NatureBudget {
+  CAPEX
+  OPEX
+  PRESTATION
+}
+
+enum TypeDepense {
+  PRESTATION
+  PDR
+}
+
+enum TypeDocument {
+  PDF
+  IMAGE
+  EXCEL
+  WORD
+  SCHEMA
+  NOTICE
+  RAPPORT
+  PHOTO
+}
+
+enum ActionAudit {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+enum StatutMouvement {
+  EN_ATTENTE
+  PARTIEL
+  RETOURNE
+  EN_RETARD
+}
+
+// ------------------------------------------------------------
+// UTILISATEURS & SÉCURITÉ
+// ------------------------------------------------------------
+
+model User {
+  id           Int       @id @default(autoincrement())
+  email        String    @unique
+  passwordHash String
+  fullName     String
+  role         Role
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  entrees        Entree[]
+  sorties        Sortie[]
+  interventions  Intervention[]
+  documents      Document[]
+  notifications  Notification[]
+  historique     Historique[]
+
+  @@map("users")
+}
+
+// ------------------------------------------------------------
+// RÉFÉRENTIELS
+// ------------------------------------------------------------
+
+model Fournisseur {
+  id        Int      @id @default(autoincrement())
+  nom       String
+  contact   String?
+  email     String?
+  telephone String?
+  adresse   String?
+  notation  Float?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  articles   ArticlePdr[]
+  commandes  Commande[]
+  entrees    Entree[]
+  sorties    Sortie[]
+  depenses   Depense[]
+
+  @@map("fournisseurs")
+}
+
+// Liste générique paramétrable : familles, sous-familles, secteurs,
+// marques, constructeurs, magasins, types MRP, unités, centres de coût,
+// services, catégories, statuts — modifiables sans toucher au code.
+model Parametre {
+  id     Int     @id @default(autoincrement())
+  type   String  // ex: "FAMILLE", "SECTEUR", "MARQUE", "MAGASIN", "CENTRE_COUT"...
+  valeur String
+  ordre  Int     @default(0)
+  actif  Boolean @default(true)
+
+  @@unique([type, valeur])
+  @@index([type])
+  @@map("parametres")
+}
+
+// ------------------------------------------------------------
+// ÉQUIPEMENTS CRITIQUES
+// ------------------------------------------------------------
+
+model Equipement {
+  id                        Int       @id @default(autoincrement())
+  codeSap                   String?   @unique
+  designation               String
+  constructeur              String?
+  marque                    String?
+  modele                    String?
+  numeroSerie               String?
+  secteur                   String
+  sousSecteur               String?
+  emplacement               String?
+  puissance                 String?
+  tension                   String?
+  courant                   String?
+  annee                     Int?
+  dateInstallation          DateTime?
+  dateDerniereIntervention  DateTime?
+  dateProchaineMaintenance  DateTime?
+  criticite                 Criticite @default(C)
+  commentaires              String?
+  createdAt                 DateTime  @default(now())
+  updatedAt                 DateTime  @updatedAt
+
+  articlesPdr    ArticlePdr[]
+  interventions  Intervention[]
+  documents      Document[]     @relation("EquipementDocuments")
+  entrees        Entree[]
+  sorties        Sortie[]
+
+  @@index([secteur])
+  @@index([criticite])
+  @@map("equipements")
+}
+
+// ------------------------------------------------------------
+// PIÈCES DE RECHANGE (PDR)
+// ------------------------------------------------------------
+
+model ArticlePdr {
+  id                     Int         @id @default(autoincrement())
+  codeSap                String      @unique
+  designation             String
+  marque                  String?
+  fabricant               String?
+  referenceConstructeur   String?
+  famille                 String?
+  sousFamille             String?
+  unite                   String?
+  magasin                 String?
+  stockMin                Int         @default(0)
+  stockMax                Int         @default(0)
+  stockActuel             Int         @default(0)
+  prixUnitaire            Decimal?    @db.Decimal(12, 2)
+  classeAbc               Criticite?
+  critique                Boolean     @default(false)
+  statut                  StatutStock @default(NORMAL)
+  fournisseurId           Int?
+  equipementId            Int?
+  archive                 Boolean     @default(false)
+  createdAt               DateTime    @default(now())
+  updatedAt               DateTime    @updatedAt
+
+  fournisseur     Fournisseur?    @relation(fields: [fournisseurId], references: [id])
+  equipement      Equipement?     @relation(fields: [equipementId], references: [id])
+  demandesAchat   DemandeAchat[]
+  entrees         Entree[]
+  sorties         Sortie[]
+  depenses        Depense[]
+
+  @@index([statut])
+  @@index([classeAbc])
+  @@map("articles_pdr")
+}
+
+// ------------------------------------------------------------
+// DEMANDES D'ACHAT / COMMANDES (DA / BC)
+// ------------------------------------------------------------
+
+model DemandeAchat {
+  id              Int          @id @default(autoincrement())
+  numeroDa        String       @unique
+  division        String?
+  demandeur       String?
+  articleId       Int?
+  quantite        Int
+  dateCreation    DateTime
+  dateValidation  DateTime?
+  statut          String       @default("N")
+  priorite        String?
+  nature          NatureBudget @default(OPEX)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  article    ArticlePdr?  @relation(fields: [articleId], references: [id])
+  commandes  Commande[]
+
+  @@index([statut])
+  @@index([division])
+  @@map("demandes_achat")
+}
+
+model Commande {
+  id              Int       @id @default(autoincrement())
+  numeroBc        String    @unique
+  demandeAchatId  Int?
+  fournisseurId   Int?
+  montant         Decimal?  @db.Decimal(14, 2)
+  dateCommande    DateTime
+  dateReception   DateTime?
+  statut          String    @default("EN_COURS")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  demandeAchat  DemandeAchat? @relation(fields: [demandeAchatId], references: [id])
+  fournisseur   Fournisseur?  @relation(fields: [fournisseurId], references: [id])
+
+  @@index([statut])
+  @@map("commandes")
+}
+
+// ------------------------------------------------------------
+// ENTRÉES / SORTIES
+// ------------------------------------------------------------
+
+model Entree {
+  id             Int       @id @default(autoincrement())
+  articleId      Int?
+  equipementId   Int?
+  quantite       Int
+  dateEntree     DateTime
+  utilisateurId  Int
+  fournisseurId  Int?
+  otNumero       String?
+  createdAt      DateTime  @default(now())
+
+  article       ArticlePdr?  @relation(fields: [articleId], references: [id])
+  equipement    Equipement?  @relation(fields: [equipementId], references: [id])
+  utilisateur   User         @relation(fields: [utilisateurId], references: [id])
+  fournisseur   Fournisseur? @relation(fields: [fournisseurId], references: [id])
+
+  @@map("entrees")
+}
+
+model Sortie {
+  id                 Int             @id @default(autoincrement())
+  articleId          Int?
+  equipementId       Int?
+  quantite           Int
+  dateSortie         DateTime
+  dateRetourPrevue   DateTime?
+  dateRetourReelle   DateTime?
+  utilisateurId      Int
+  destination        String?
+  fournisseurId      Int?
+  otNumero           String?
+  statut             StatutMouvement @default(EN_ATTENTE)
+  createdAt          DateTime        @default(now())
+
+  article       ArticlePdr?  @relation(fields: [articleId], references: [id])
+  equipement    Equipement?  @relation(fields: [equipementId], references: [id])
+  utilisateur   User         @relation(fields: [utilisateurId], references: [id])
+  fournisseur   Fournisseur? @relation(fields: [fournisseurId], references: [id])
+
+  @@index([statut])
+  @@map("sorties")
+}
+
+// ------------------------------------------------------------
+// INTERVENTIONS
+// ------------------------------------------------------------
+
+model Intervention {
+  id                 Int       @id @default(autoincrement())
+  equipementId       Int
+  dateIntervention   DateTime
+  type               String?
+  description        String?
+  technicien         String?
+  cout               Decimal?  @db.Decimal(12, 2)
+  createdById        Int
+  createdAt          DateTime  @default(now())
+
+  equipement   Equipement @relation(fields: [equipementId], references: [id])
+  createdBy    User       @relation(fields: [createdById], references: [id])
+
+  @@map("interventions")
+}
+
+// ------------------------------------------------------------
+// DÉPENSES ARRÊT
+// ------------------------------------------------------------
+
+model Depense {
+  id             Int          @id @default(autoincrement())
+  secteur        String
+  nature         NatureBudget
+  type           TypeDepense
+  articleId      Int?
+  montant        Decimal      @db.Decimal(14, 2)
+  pilote         String?
+  otNumero       String?
+  fournisseurId  Int?
+  statut         String       @default("PREVU")
+  date           DateTime     @default(now())
+  createdAt      DateTime     @default(now())
+
+  article      ArticlePdr?  @relation(fields: [articleId], references: [id])
+  fournisseur  Fournisseur? @relation(fields: [fournisseurId], references: [id])
+
+  @@index([secteur])
+  @@map("depenses")
+}
+
+// ------------------------------------------------------------
+// DOCUMENTS (GED)
+// ------------------------------------------------------------
+
+model Document {
+  id             Int          @id @default(autoincrement())
+  entityType     String       // "EQUIPEMENT" | "ARTICLE_PDR" | "INTERVENTION" | ...
+  entityId       Int
+  typeDocument   TypeDocument
+  fichierUrl     String
+  nomFichier     String
+  uploadedById   Int
+  createdAt      DateTime     @default(now())
+
+  uploadedBy    User         @relation(fields: [uploadedById], references: [id])
+  equipement    Equipement?  @relation("EquipementDocuments", fields: [entityId], references: [id], map: "documents_equipement_fkey")
+
+  @@index([entityType, entityId])
+  @@map("documents")
+}
+
+// ------------------------------------------------------------
+// NOTIFICATIONS
+// ------------------------------------------------------------
+
+model Notification {
+  id             Int       @id @default(autoincrement())
+  utilisateurId  Int
+  type           String    // "STOCK_BAS" | "COMMANDE_RETARD" | "DA_ATTENTE" | "MAINTENANCE" | "CONTRAT_EXPIRE" | "ARTICLE_CRITIQUE"
+  message        String
+  entityType     String?
+  entityId       Int?
+  isRead         Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+
+  utilisateur  User @relation(fields: [utilisateurId], references: [id])
+
+  @@index([utilisateurId, isRead])
+  @@map("notifications")
+}
+
+// ------------------------------------------------------------
+// AUDIT / HISTORIQUE
+// ------------------------------------------------------------
+
+model Historique {
+  id               Int          @id @default(autoincrement())
+  tableName        String
+  recordId         Int
+  action           ActionAudit
+  utilisateurId    Int
+  ancienneValeur   Json?
+  nouvelleValeur   Json?
+  createdAt        DateTime     @default(now())
+
+  utilisateur  User @relation(fields: [utilisateurId], references: [id])
+
+  @@index([tableName, recordId])
+  @@map("historique")
+}
