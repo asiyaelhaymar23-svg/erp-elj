@@ -6,7 +6,7 @@ interventions, dépenses, documents (GED), notifications, audit.
 
 - `backend/` — API NestJS + Prisma + PostgreSQL
 - `frontend/` — React (Vite) + React Query
-- `docker-compose.yml` — Postgres, Redis, backend, frontend
+- `docker-compose.yml` — Postgres, backend, frontend
 
 ## Démarrage rapide avec Docker
 
@@ -20,20 +20,27 @@ docker compose up --build
 
 - Frontend : http://localhost:8080
 - API : http://localhost:3000 (documentation Swagger sur `/api/docs`)
-- Au premier démarrage, créer le compte administrateur :
-  `docker compose exec backend npm run prisma:seed`
-  (compte créé : `admin@sonasid-elj.local` / `ChangeMoi123!` — à changer immédiatement)
+- Le compte administrateur est créé automatiquement au premier démarrage
+  (`admin@sonasid-elj.local` / `ChangeMoi123!` — à changer immédiatement).
 
-Les migrations Prisma sont appliquées automatiquement au démarrage du
-conteneur backend (`docker-entrypoint.sh` → `prisma migrate deploy`). Les
-documents uploadés (GED) sont persistés dans le volume Docker `uploads`,
-les données PostgreSQL dans `pgdata`.
+Les migrations Prisma et le compte administrateur sont appliqués
+automatiquement au démarrage du conteneur backend (`docker-entrypoint.sh`
+→ `prisma migrate deploy` puis `prisma:seed`, sûr à rejouer à chaque
+démarrage). Les documents uploadés (GED) sont persistés dans le volume
+Docker `uploads`, les données PostgreSQL dans `pgdata`.
+
+### Déployer sur Render / Railway / un serveur Docker
+
+Voir [DEPLOY.md](./DEPLOY.md) pour un guide pas-à-pas de déploiement sur
+Render (Blueprint `render.yaml` fourni, prêt à l'emploi). Le même
+`docker-compose.yml` fonctionne tel quel sur n'importe quel serveur avec
+Docker installé.
 
 ## Démarrage en local, sans Docker
 
 ```bash
 # Base de données
-docker compose up -d postgres redis   # ou une instance PostgreSQL/Redis locale
+docker compose up -d postgres          # ou une instance PostgreSQL locale
 
 # Backend
 cd backend

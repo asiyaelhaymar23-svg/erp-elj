@@ -1,0 +1,49 @@
+# Blueprint Render : décrit toute la pile en un seul fichier.
+# Dans le dashboard Render : New + -> Blueprint -> connecter ce dépôt.
+# Render détecte ce fichier et propose de créer les 3 ressources ci-dessous.
+
+databases:
+  - name: erp-elj-db
+    databaseName: elj
+    user: elj
+    plan: free
+
+services:
+  - type: web
+    name: erp-elj-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: erp-elj-db
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: NODE_ENV
+        value: production
+      # Récupère automatiquement l'hôte du frontend (docker-entrypoint.sh
+      # et main.ts ajoutent https:// tout seuls si besoin).
+      - key: CORS_ORIGIN
+        fromService:
+          type: web
+          name: erp-elj-frontend
+          property: host
+
+  - type: web
+    name: erp-elj-frontend
+    runtime: docker
+    dockerfilePath: ./frontend/Dockerfile
+    dockerContext: ./frontend
+    plan: free
+    envVars:
+      # Récupère automatiquement l'hôte du backend (voir
+      # frontend/docker-entrypoint.d/40-env-config.sh pour l'ajout de https://).
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: erp-elj-backend
+          property: host

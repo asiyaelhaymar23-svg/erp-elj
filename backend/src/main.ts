@@ -11,8 +11,18 @@ async function bootstrap() {
     throw new Error('JWT_SECRET doit être défini avec une vraie valeur secrète en production.');
   }
 
+  // CORS_ORIGIN peut être un nom d'hôte nu (ex. Render `fromService:
+  // property: host`, qui ne fournit jamais de schéma) : on ajoute https://
+  // par défaut plutôt que de laisser une comparaison d'origine qui ne
+  // correspondra jamais à l'en-tête Origin réel du navigateur.
+  const origins = process.env.CORS_ORIGIN
+    ?.split(',')
+    .map((o) => o.trim())
+    .filter(Boolean)
+    .map((o) => (/^https?:\/\//.test(o) ? o : `https://${o}`));
+
   const app = await NestFactory.create(AppModule, {
-    cors: process.env.CORS_ORIGIN ? { origin: process.env.CORS_ORIGIN.split(',').map((o) => o.trim()) } : true,
+    cors: origins && origins.length > 0 ? { origin: origins } : true,
   });
 
   app.useGlobalPipes(
