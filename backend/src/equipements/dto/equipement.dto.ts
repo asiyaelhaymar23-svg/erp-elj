@@ -1,5 +1,6 @@
-import { IsInt, IsOptional, IsString, IsEnum, IsDateString, IsIn } from 'class-validator';
+import { IsInt, IsOptional, IsString, IsEnum, IsDate, IsIn } from 'class-validator';
 import { Type } from 'class-transformer';
+import { PartialType } from '@nestjs/swagger';
 import { Criticite } from '@prisma/client';
 
 export class CreateEquipementDto {
@@ -16,14 +17,23 @@ export class CreateEquipementDto {
   @IsOptional() @IsString() tension?: string;
   @IsOptional() @IsString() courant?: string;
   @IsOptional() @Type(() => Number) @IsInt() annee?: number;
-  @IsOptional() @IsDateString() dateInstallation?: string;
-  @IsOptional() @IsDateString() dateDerniereIntervention?: string;
-  @IsOptional() @IsDateString() dateProchaineMaintenance?: string;
+  // @Type(() => Date) plutôt que @IsDateString() : un <input type="date">
+  // envoie "2026-01-01" (date seule), que Prisma refuse pour un DateTime.
+  @IsOptional() @Type(() => Date) @IsDate() dateInstallation?: Date;
+  @IsOptional() @Type(() => Date) @IsDate() dateDerniereIntervention?: Date;
+  @IsOptional() @Type(() => Date) @IsDate() dateProchaineMaintenance?: Date;
   @IsOptional() @IsEnum(Criticite) criticite?: Criticite;
   @IsOptional() @IsString() commentaires?: string;
 }
 
-export class UpdateEquipementDto extends CreateEquipementDto {}
+export class UpdateEquipementDto extends PartialType(CreateEquipementDto) {}
+
+// Liste blanche des colonnes triables : évite qu'une valeur arbitraire
+// passée telle quelle à Prisma.orderBy fasse échouer la requête.
+const COLONNES_TRIABLES = [
+  'designation', 'codeSap', 'secteur', 'criticite', 'annee',
+  'dateInstallation', 'dateDerniereIntervention', 'dateProchaineMaintenance', 'createdAt',
+] as const;
 
 export class QueryEquipementDto {
   @IsOptional() @IsString() search?: string;
@@ -31,6 +41,6 @@ export class QueryEquipementDto {
   @IsOptional() @IsEnum(Criticite) criticite?: Criticite;
   @IsOptional() @Type(() => Number) @IsInt() page?: number = 1;
   @IsOptional() @Type(() => Number) @IsInt() pageSize?: number = 25;
-  @IsOptional() @IsString() sortBy?: string = 'designation';
+  @IsOptional() @IsIn(COLONNES_TRIABLES) sortBy?: string = 'designation';
   @IsOptional() @IsIn(['asc', 'desc']) sortOrder?: 'asc' | 'desc' = 'asc';
 }

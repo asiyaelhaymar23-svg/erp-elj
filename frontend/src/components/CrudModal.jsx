@@ -12,6 +12,22 @@ export function CrudModal({ title, fields, initialValues, onSubmit, onClose, sav
 
   const handleChange = (key, val) => setValues((v) => ({ ...v, [key]: val }));
 
+  // initialValues vient tel quel de l'API (id, createdAt, champs calculés
+  // comme _count...) : ne renvoyer que les champs réellement éditables par
+  // ce formulaire, sinon le PATCH est rejeté ("property id should not
+  // exist") dès que le serveur interdit les propriétés non attendues. Un
+  // champ optionnel laissé vide (select non choisi) est omis plutôt
+  // qu'envoyé comme chaîne vide, pour ne pas échouer une validation
+  // d'énumération.
+  const handleSubmit = () => {
+    const payload = {};
+    for (const f of fields) {
+      const val = values[f.key];
+      if (val !== "" && val !== null && val !== undefined) payload[f.key] = val;
+    }
+    onSubmit(payload);
+  };
+
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(20,22,26,0.45)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
       <div style={{ background: "#fff", borderRadius: 8, width: 480, maxHeight: "85vh", overflowY: "auto" }}>
@@ -43,7 +59,7 @@ export function CrudModal({ title, fields, initialValues, onSubmit, onClose, sav
         <div style={{ padding: 14, borderTop: `1px solid ${GRAY_BORDER}`, display: "flex", justifyContent: "flex-end", gap: 8 }}>
           <button onClick={onClose} style={{ padding: "8px 14px", borderRadius: 4, border: `1px solid ${GRAY_BORDER}`, background: "#fff" }}>Annuler</button>
           <button
-            onClick={() => onSubmit(values)}
+            onClick={handleSubmit}
             disabled={saving}
             style={{ padding: "8px 14px", borderRadius: 4, border: "none", background: ORANGE, color: "#fff", fontWeight: 700 }}
           >

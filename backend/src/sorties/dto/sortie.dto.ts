@@ -1,19 +1,21 @@
-import { IsDateString, IsInt, IsOptional, IsString } from 'class-validator';
+import { IsDate, IsInt, IsOptional, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateSortieDto {
   @IsOptional() @Type(() => Number) @IsInt() articleId?: number;
   @IsOptional() @Type(() => Number) @IsInt() equipementId?: number;
   @Type(() => Number) @IsInt() quantite: number;
-  @IsDateString() dateSortie: string;
-  @IsOptional() @IsDateString() dateRetourPrevue?: string;
+  // @Type(() => Date) plutôt que @IsDateString() : un <input type="date">
+  // envoie "2026-01-01" (date seule), que Prisma refuse pour un DateTime.
+  @Type(() => Date) @IsDate() dateSortie: Date;
+  @IsOptional() @Type(() => Date) @IsDate() dateRetourPrevue?: Date;
   @IsOptional() @IsString() destination?: string;
   @IsOptional() @Type(() => Number) @IsInt() fournisseurId?: number;
   @IsOptional() @IsString() otNumero?: string;
 }
 
 export class RetourSortieDto {
-  @IsDateString() dateRetourReelle: string;
+  @Type(() => Date) @IsDate() dateRetourReelle: Date;
   @IsOptional() @Type(() => Number) @IsInt() quantiteRetournee?: number;
 }
 

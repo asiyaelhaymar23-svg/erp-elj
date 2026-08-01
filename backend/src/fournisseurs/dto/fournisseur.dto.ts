@@ -1,5 +1,6 @@
 import { IsEmail, IsNumber, IsOptional, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
+import { PartialType } from '@nestjs/swagger';
 
 export class CreateFournisseurDto {
   @IsString() nom: string;
@@ -10,7 +11,7 @@ export class CreateFournisseurDto {
   @IsOptional() @Type(() => Number) @IsNumber() notation?: number;
 }
 
-export class UpdateFournisseurDto extends CreateFournisseurDto {}
+export class UpdateFournisseurDto extends PartialType(CreateFournisseurDto) {}
 
 export class QueryFournisseurDto {
   @IsOptional() @IsString() search?: string;

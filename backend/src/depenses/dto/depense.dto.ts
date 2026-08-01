@@ -1,5 +1,6 @@
 import { IsEnum, IsInt, IsNumber, IsOptional, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
+import { PartialType } from '@nestjs/swagger';
 import { NatureBudget, TypeDepense } from '@prisma/client';
 
 export class CreateDepenseDto {
@@ -14,7 +15,7 @@ export class CreateDepenseDto {
   @IsOptional() @IsString() statut?: string;
 }
 
-export class UpdateDepenseDto extends CreateDepenseDto {}
+export class UpdateDepenseDto extends PartialType(CreateDepenseDto) {}
 
 export class QueryDepenseDto {
   @IsOptional() @IsString() secteur?: string;

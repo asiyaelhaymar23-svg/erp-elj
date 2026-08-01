@@ -1,17 +1,22 @@
-import { IsDateString, IsInt, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsDate, IsInt, IsNumber, IsOptional, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
+import { PartialType } from '@nestjs/swagger';
 
 export class CreateCommandeDto {
   @IsString() numeroBc: string;
   @IsOptional() @Type(() => Number) @IsInt() demandeAchatId?: number;
   @IsOptional() @Type(() => Number) @IsInt() fournisseurId?: number;
   @IsOptional() @Type(() => Number) @IsNumber() montant?: number;
-  @IsDateString() dateCommande: string;
-  @IsOptional() @IsDateString() dateReception?: string;
+  // @Type(() => Date) plutôt que @IsDateString() : un <input type="date">
+  // envoie "2026-01-01" (date seule), que Prisma refuse pour un DateTime
+  // ("premature end of input, expected ISO-8601 DateTime"). @Type() le
+  // convertit en véritable Date, que Prisma accepte toujours.
+  @Type(() => Date) @IsDate() dateCommande: Date;
+  @IsOptional() @Type(() => Date) @IsDate() dateReception?: Date;
   @IsOptional() @IsString() statut?: string;
 }
 
-export class UpdateCommandeDto extends CreateCommandeDto {}
+export class UpdateCommandeDto extends PartialType(CreateCommandeDto) {}
 
 export class QueryCommandeDto {
   @IsOptional() @IsString() search?: string;

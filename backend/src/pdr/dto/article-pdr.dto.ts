@@ -1,5 +1,6 @@
 import { IsBoolean, IsEnum, IsInt, IsNumber, IsOptional, IsString } from 'class-validator';
 import { Type } from 'class-transformer';
+import { PartialType } from '@nestjs/swagger';
 import { Criticite, StatutStock } from '@prisma/client';
 
 export class CreateArticlePdrDto {
@@ -22,7 +23,7 @@ export class CreateArticlePdrDto {
   @IsOptional() @Type(() => Number) @IsInt() equipementId?: number;
 }
 
-export class UpdateArticlePdrDto extends CreateArticlePdrDto {}
+export class UpdateArticlePdrDto extends PartialType(CreateArticlePdrDto) {}
 
 export class QueryArticlePdrDto {
   @IsOptional() @IsString() search?: string;

@@ -52,21 +52,28 @@ export class RapportsService {
       }
     };
 
+    // La police standard WinAnsi de pdf-lib ne peut pas encoder les espaces
+    // "fines" que Intl/toLocaleString('fr-FR') insère (séparateur de
+    // milliers, entre la date et l'heure...) : ça faisait planter tout
+    // l'export PDF dès qu'un montant ≥ 1000 apparaissait. On les neutralise
+    // avant de dessiner, pour ce texte-ci et tout texte dynamique futur.
+    const texteCompatiblePdf = (texte: string) => texte.replace(/[\u202F\u00A0\u2007\u2009]/g, ' ');
+
     const titre = (texte: string) => {
       nouvellePageSiNecessaire(28);
-      page.drawText(texte, { x: marge, y, size: 14, font: bold, color: rgb(0.13, 0.15, 0.17) });
+      page.drawText(texteCompatiblePdf(texte), { x: marge, y, size: 14, font: bold, color: rgb(0.13, 0.15, 0.17) });
       y -= 22;
     };
 
     const sousTitre = (texte: string) => {
       nouvellePageSiNecessaire(20);
-      page.drawText(texte, { x: marge, y, size: 11, font: bold, color: rgb(0.72, 0.31, 0.06) });
+      page.drawText(texteCompatiblePdf(texte), { x: marge, y, size: 11, font: bold, color: rgb(0.72, 0.31, 0.06) });
       y -= 16;
     };
 
     const ligne = (texte: string) => {
       nouvellePageSiNecessaire(14);
-      page.drawText(texte, { x: marge, y, size: 10, font, color: rgb(0.2, 0.2, 0.2) });
+      page.drawText(texteCompatiblePdf(texte), { x: marge, y, size: 10, font, color: rgb(0.2, 0.2, 0.2) });
       y -= 14;
     };
 

@@ -17,17 +17,6 @@ const FIELDS = [
   { key: "priorite", label: "Priorité" },
 ];
 
-const COLUMNS = [
-  { key: "numeroDa", label: "N° DA" },
-  { key: "division", label: "Division" },
-  { key: "quantite", label: "Quantité" },
-  { key: "nature", label: "Nature" },
-  {
-    key: "transformeeEnBc", label: "Transformée en BC",
-    render: (v) => <span style={{ color: v ? GREEN : RED, fontWeight: 700 }}>{v ? "Oui" : "Non"}</span>,
-  },
-];
-
 export default function DemandesAchatPage() {
   const { list, create, update, remove } = useCrud("demandes-achat");
   const [page, setPage] = useState(1);
@@ -41,6 +30,25 @@ export default function DemandesAchatPage() {
     setEditing(null);
   };
 
+  const valider = (row) => update.mutate({ id: row.id, data: { dateValidation: new Date().toISOString() } });
+
+  const columns = [
+    { key: "numeroDa", label: "N° DA" },
+    { key: "division", label: "Division" },
+    { key: "quantite", label: "Quantité" },
+    { key: "nature", label: "Nature" },
+    {
+      key: "transformeeEnBc", label: "Transformée en BC",
+      render: (v) => <span style={{ color: v ? GREEN : RED, fontWeight: 700 }}>{v ? "Oui" : "Non"}</span>,
+    },
+    {
+      key: "dateValidation", label: "Validation",
+      render: (v, row) => v
+        ? new Date(v).toLocaleDateString("fr-FR")
+        : <button onClick={() => valider(row)} style={{ fontSize: 11, border: "1px solid #E4E7EB", borderRadius: 4, padding: "3px 8px", cursor: "pointer" }}>Marquer validée</button>,
+    },
+  ];
+
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
@@ -50,7 +58,7 @@ export default function DemandesAchatPage() {
         </button>
       </div>
       <DataTable
-        columns={COLUMNS} rows={data?.data || []} total={data?.total} page={page} pageSize={25}
+        columns={columns} rows={data?.data || []} total={data?.total} page={page} pageSize={25}
         onPageChange={setPage} search={search} onSearchChange={(v) => { setSearch(v); setPage(1); }}
         onEdit={setEditing} onDelete={(row) => { if (confirm(`Supprimer ${row.numeroDa} ?`)) remove.mutate(row.id); }}
         loading={isLoading}

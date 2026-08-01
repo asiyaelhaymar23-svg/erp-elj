@@ -61,7 +61,7 @@ export default function SortiesPage() {
       <DataTable
         columns={columns} rows={data?.data || []} total={data?.total} page={page} pageSize={25}
         onPageChange={setPage} search="" onSearchChange={() => {}}
-        onEdit={() => {}} onDelete={(row) => { if (confirm("Supprimer cette sortie ?")) remove.mutate(row.id); }}
+        onDelete={(row) => { if (confirm("Supprimer cette sortie ?")) remove.mutate(row.id); }}
         loading={isLoading}
       />
       {creating && (

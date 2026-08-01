@@ -42,7 +42,7 @@ export function DataTable({
                 {columns.map((c) => <td key={c.key} style={{ padding: "8px 10px" }}>{c.render ? c.render(row[c.key], row) : row[c.key]}</td>)}
                 {!readOnly && (
                   <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>
-                    <button onClick={() => onEdit(row)} style={btnStyle}>Modifier</button>
+                    {onEdit && <button onClick={() => onEdit(row)} style={btnStyle}>Modifier</button>}
                     {onDuplicate && <button onClick={() => onDuplicate(row)} style={btnStyle}>Dupliquer</button>}
                     <button onClick={() => onDelete(row)} style={{ ...btnStyle, color: "#DC2626" }}>{deleteLabel}</button>
                   </td>
