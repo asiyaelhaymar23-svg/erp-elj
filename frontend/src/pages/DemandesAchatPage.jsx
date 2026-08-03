@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useCrud } from "../hooks/useCrud";
 import { DataTable } from "../components/DataTable";
 import { CrudModal } from "../components/CrudModal";
+import { ImportButton } from "../components/ImportButton";
 
 const ORANGE = "#F5821F";
 const GREEN = "#16A34A";
@@ -53,9 +54,12 @@ export default function DemandesAchatPage() {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
         <h2 style={{ fontSize: 16, color: "#22262B" }}>Demandes d'Achat (DA)</h2>
-        <button onClick={() => setEditing({})} style={{ background: ORANGE, color: "#fff", border: "none", borderRadius: 4, padding: "8px 14px", fontWeight: 700, cursor: "pointer" }}>
-          + Nouvelle DA
-        </button>
+        <div style={{ display: "flex", gap: 10 }}>
+          <ImportButton resource="demandes-achat" invalidateKey="demandes-achat" label="Importer Excel (SAP)" />
+          <button onClick={() => setEditing({})} style={{ background: ORANGE, color: "#fff", border: "none", borderRadius: 4, padding: "8px 14px", fontWeight: 700, cursor: "pointer" }}>
+            + Nouvelle DA
+          </button>
+        </div>
       </div>
       <DataTable
         columns={columns} rows={data?.data || []} total={data?.total} page={page} pageSize={25}

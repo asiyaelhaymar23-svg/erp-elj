@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useCrud } from "../hooks/useCrud";
 import { DataTable } from "../components/DataTable";
 import { CrudModal } from "../components/CrudModal";
+import { ImportButton } from "../components/ImportButton";
 
 const ORANGE = "#F5821F";
 const RED = "#DC2626";
@@ -52,12 +53,15 @@ export default function PdrPage() {
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 12 }}>
         <h2 style={{ fontSize: 16, color: "#22262B" }}>Suivi PDR Magasin ELJ</h2>
-        <button
-          onClick={() => setEditing({})}
-          style={{ background: ORANGE, color: "#fff", border: "none", borderRadius: 4, padding: "8px 14px", fontWeight: 700, cursor: "pointer" }}
-        >
-          + Nouvel article
-        </button>
+        <div style={{ display: "flex", gap: 10 }}>
+          <ImportButton resource="pdr" invalidateKey="pdr" />
+          <button
+            onClick={() => setEditing({})}
+            style={{ background: ORANGE, color: "#fff", border: "none", borderRadius: 4, padding: "8px 14px", fontWeight: 700, cursor: "pointer" }}
+          >
+            + Nouvel article
+          </button>
+        </div>
       </div>
 
       <DataTable

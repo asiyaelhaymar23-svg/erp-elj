@@ -121,6 +121,33 @@ export class PdrService {
     return { success: true };
   }
 
+  // Import Excel : une ligne = un article. Upsert sur codeSap (unique) pour
+  // pouvoir réimporter un extrait de stock périodique (ex. export SAP)
+  // sans dupliquer les articles déjà connus — même logique anti-doublon
+  // que l'import des DA. Réutilise create()/update() pour garder le
+  // recalcul du statut et l'audit cohérents avec la saisie manuelle.
+  async importFromRows(rows: Record<string, any>[], userId: number) {
+    const results = { created: 0, updated: 0, errors: [] as { row: number; error: string }[] };
+    for (const [index, row] of rows.entries()) {
+      try {
+        const codeSap = String(row.codeSap ?? '').trim();
+        if (!codeSap) throw new Error('codeSap manquant');
+
+        const existing = await this.prisma.articlePdr.findUnique({ where: { codeSap } });
+        if (existing) {
+          await this.update(existing.id, row as UpdateArticlePdrDto, userId);
+          results.updated++;
+        } else {
+          await this.create(row as CreateArticlePdrDto, userId);
+          results.created++;
+        }
+      } catch (e: any) {
+        results.errors.push({ row: index + 2, error: e.message }); // +2 = ligne Excel réelle (entête + 1-index)
+      }
+    }
+    return results;
+  }
+
   // Notification automatique dès qu'un article passe en rupture/critique —
   // à étendre aux autres cas (commande en retard, DA non validée, etc.)
   // dans NotificationsModule, en suivant ce même déclencheur post-écriture.

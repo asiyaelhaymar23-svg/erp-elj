@@ -39,4 +39,53 @@ describe('PdrService', () => {
     prisma.articlePdr.findUnique.mockResolvedValue(null);
     await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
   });
+
+  describe('importFromRows', () => {
+    it('crée un nouvel article si le codeSap est inconnu', async () => {
+      prisma.articlePdr.findUnique.mockImplementation(({ where }: any) =>
+        where.codeSap
+          ? Promise.resolve(null)
+          : Promise.resolve({ id: 1, statut: 'NORMAL', designation: 'Nouveau', codeSap: 'NEW-1' }),
+      );
+      prisma.articlePdr.create.mockResolvedValue({ id: 1, codeSap: 'NEW-1', designation: 'Nouveau', statut: 'NORMAL' });
+
+      const result = await service.importFromRows([{ codeSap: 'NEW-1', designation: 'Nouveau', stockActuel: 10 }], 1);
+
+      expect(result).toEqual({ created: 1, updated: 0, errors: [] });
+      expect(prisma.articlePdr.create).toHaveBeenCalled();
+      expect(prisma.articlePdr.update).not.toHaveBeenCalled();
+    });
+
+    it('met à jour un article existant (upsert sur codeSap) plutôt que de le dupliquer', async () => {
+      prisma.articlePdr.findUnique.mockImplementation(({ where }: any) =>
+        where.codeSap
+          ? Promise.resolve({ id: 5, codeSap: 'EXIST-1', stockActuel: 3, stockMin: 5, stockMax: 20 })
+          : Promise.resolve({ id: 5, statut: 'CRITIQUE', designation: 'Existant', codeSap: 'EXIST-1' }),
+      );
+      prisma.articlePdr.update.mockResolvedValue({ id: 5, codeSap: 'EXIST-1', statut: 'NORMAL' });
+
+      const result = await service.importFromRows([{ codeSap: 'EXIST-1', designation: 'Existant', stockActuel: 10 }], 1);
+
+      expect(result).toEqual({ created: 0, updated: 1, errors: [] });
+      expect(prisma.articlePdr.update).toHaveBeenCalled();
+      expect(prisma.articlePdr.create).not.toHaveBeenCalled();
+    });
+
+    it('rapporte une erreur par ligne (ex. codeSap manquant) sans faire échouer tout le fichier', async () => {
+      prisma.articlePdr.findUnique.mockImplementation(({ where }: any) =>
+        where.codeSap
+          ? Promise.resolve(null)
+          : Promise.resolve({ id: 2, statut: 'NORMAL', designation: 'OK', codeSap: 'OK-1' }),
+      );
+      prisma.articlePdr.create.mockResolvedValue({ id: 2, codeSap: 'OK-1', designation: 'OK', statut: 'NORMAL' });
+
+      const result = await service.importFromRows(
+        [{ codeSap: 'OK-1', designation: 'OK', stockActuel: 1 }, { designation: 'Sans code' }],
+        1,
+      );
+
+      expect(result.created).toBe(1);
+      expect(result.errors).toEqual([{ row: 3, error: 'codeSap manquant' }]);
+    });
+  });
 });
