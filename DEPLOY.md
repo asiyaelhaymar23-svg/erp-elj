@@ -2,8 +2,10 @@
 
 Ce dépôt contient un fichier `render.yaml` (Blueprint) qui décrit toute la
 pile — base de données, API, frontend — pour que Render la crée en une
-fois. Les deux services se transmettent automatiquement leurs URLs l'un à
-l'autre : normalement, aucune variable d'environnement à saisir à la main.
+fois, URLs publiques déjà renseignées entre les deux services (backend et
+frontend se pointent l'un vers l'autre via `https://<nom-du-service>.onrender.com`).
+Si tu renommes un des deux services dans `render.yaml`, mets à jour
+`VITE_API_URL` et `CORS_ORIGIN` en conséquence dans le même fichier.
 
 ## 1. Créer un compte Render
 
@@ -64,8 +66,7 @@ d'écran dédié dans l'interface — passe par `PATCH /users/:id` via
 
 ## Si le Blueprint échoue à se créer automatiquement
 
-Si Render refuse la référence croisée `fromService` entre les deux
-services (rare, mais possible selon la version du moteur de Blueprint) :
+Si Render refuse de créer les 3 ressources d'un coup :
 
 1. Créer les 3 ressources manuellement dans le dashboard (**New +** →
    **PostgreSQL**, puis **New +** → **Web Service** deux fois, en pointant
@@ -73,11 +74,20 @@ services (rare, mais possible selon la version du moteur de Blueprint) :
    respectivement, `dockerContext` sur `backend` et `frontend`).
 2. Sur `erp-elj-backend`, ajouter les variables d'environnement
    `DATABASE_URL` (bouton "Connect" pour lier la base créée), `JWT_SECRET`
-   (générer une valeur aléatoire longue), `NODE_ENV=production`.
-3. Une fois les deux services démarrés une première fois, copier l'URL de
-   chacun et la mettre dans l'autre : `VITE_API_URL` sur le frontend =
-   URL du backend, `CORS_ORIGIN` sur le backend = URL du frontend. Chaque
-   changement de variable déclenche un redéploiement automatique.
+   (générer une valeur aléatoire longue), `NODE_ENV=production`,
+   `CORS_ORIGIN` (URL publique du frontend, ex.
+   `https://erp-elj-frontend.onrender.com`).
+3. Sur `erp-elj-frontend`, ajouter `VITE_API_URL` (URL publique du
+   backend, ex. `https://erp-elj-backend.onrender.com`).
+
+**Piège à connaître** : dans Render, `fromService: property: host` (utilisé
+pour connecter deux services entre eux dans un Blueprint) renvoie le nom
+interne réseau privé de Render, pas l'URL publique `*.onrender.com` —
+injoignable depuis le navigateur d'un utilisateur. C'est pour ça que
+`render.yaml` utilise des `value:` littérales plutôt que cette
+référence : préférer toujours l'URL publique complète pour toute variable
+lue côté navigateur (`VITE_API_URL`) ou comparée à l'en-tête `Origin` d'une
+requête (`CORS_ORIGIN`).
 
 ## Mettre à jour l'application après ce premier déploiement
 

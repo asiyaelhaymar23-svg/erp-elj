@@ -25,13 +25,13 @@ services:
         generateValue: true
       - key: NODE_ENV
         value: production
-      # Récupère automatiquement l'hôte du frontend (docker-entrypoint.sh
-      # et main.ts ajoutent https:// tout seuls si besoin).
+      # URL publique du frontend (https://<nom-du-service>.onrender.com).
+      # fromService: property: host renvoie le nom interne réseau privé de
+      # Render, injoignable depuis le navigateur d'un utilisateur — donc
+      # inutilisable ici malgré les apparences. Si tu renommes le service
+      # erp-elj-frontend, mets cette valeur à jour en conséquence.
       - key: CORS_ORIGIN
-        fromService:
-          type: web
-          name: erp-elj-frontend
-          property: host
+        value: https://erp-elj-frontend.onrender.com
 
   - type: web
     name: erp-elj-frontend
@@ -40,10 +40,10 @@ services:
     dockerContext: ./frontend
     plan: free
     envVars:
-      # Récupère automatiquement l'hôte du backend (voir
-      # frontend/docker-entrypoint.d/40-env-config.sh pour l'ajout de https://).
+      # URL publique du backend (https://<nom-du-service>.onrender.com).
+      # fromService: property: host renvoie le nom interne réseau privé de
+      # Render, injoignable depuis le navigateur d'un utilisateur — donc
+      # inutilisable ici malgré les apparences. Si tu renommes le service
+      # erp-elj-backend, mets cette valeur à jour en conséquence.
       - key: VITE_API_URL
-        fromService:
-          type: web
-          name: erp-elj-backend
-          property: host
+        value: https://erp-elj-backend.onrender.com
